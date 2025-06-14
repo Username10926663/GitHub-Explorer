@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Info Fetcher</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e0f2f7 0%, #c1e8ed 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            max-width: 650px;
+            width: 100%;
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        input {
+            border-radius: 10px;
+            padding: 16px;
+            font-size: 1.05rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        button {
+            border-radius: 10px;
+            padding: 16px 28px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.08);
+        }
+
+        #fetchBtn {
+            background-color: #6366f1;
+            color: white;
+        }
+        #fetchBtn:hover:not(:disabled) {
+            background-color: #4f46e5;
+        }
+
+        #clearBtn {
+            background-color: #cbd5e1;
+            color: #4b5563;
+        }
+        #clearBtn:hover:not(:disabled) {
+            background-color: #94a3b8;
+        }
+
+        #copyUrlBtn {
+            background-color: #10b981;
+            color: white;
+        }
+        #copyUrlBtn:hover:not(:disabled) {
+            background-color: #059669;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #6366f1;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            animation: spin 1s linear infinite;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        #results {
+            border: none;
+            background-color: #f8fafc;
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+            line-height: 1.7;
+        }
+        #resultContent p {
+            margin-bottom: 8px;
+        }
+        #resultContent strong {
+            color: #334155;
+        }
+    </style>
+</head>
+<body>
+    <div class="container flex flex-col items-center space-y-8">
+        <h1 class="text-4xl font-extrabold text-gray-800 mb-2 tracking-tight">GitHub Info Explorer</h1>
+
+        <div class="w-full">
+            <label for="githubUrl" class="block text-gray-700 text-base font-medium mb-2">Enter GitHub User or Repository URL:</label>
+            <input
+                type="url"
+                id="githubUrl"
+                class="w-full bg-gray-50 border-gray-300 placeholder-gray-400 text-gray-800"
+                placeholder="e.g., https://github.com/octocat or https://github.com/tailwindlabs/tailwindcss"
+            />
+        </div>
+
+        <div class="flex flex-col sm:flex-row w-full space-y-4 sm:space-y-0 sm:space-x-4">
+            <button id="fetchBtn">
+                Fetch Info
+            </button>
+            <button id="clearBtn">
+                Clear
+            </button>
+        </div>
+
+        <div id="fetchLimitInfo" class="text-sm text-gray-600 mt-2">
+            Fetches remaining: <span id="fetchesRemaining" class="font-bold text-gray-800">20</span> / 20
+        </div>
+        <div id="fetchLimitMessage" class="hidden text-red-600 font-semibold text-center mt-2 p-2 bg-red-50 rounded-lg border border-red-200">
+            You have reached the maximum fetch limit (20). Please clear to reset.
+        </div>
+
+        <div id="loadingIndicator" class="hidden flex items-center justify-center text-blue-500 font-semibold space-x-2 mt-4">
+            <div class="spinner"></div>
+            <span>Fetching data...</span>
+        </div>
+
+        <div id="errorMessage" class="hidden text-red-600 font-semibold text-center mt-4 p-2 bg-red-50 rounded-lg border border-red-200">
+        </div>
+
+        <div id="results" class="w-full mt-6 hidden">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2 border-gray-200">Fetched Information</h2>
+            <div id="resultContent" class="text-gray-700">
+            </div>
+            <button id="copyUrlBtn">
+                Copy URL
+            </button>
+            <span id="copyMessage" class="ml-3 text-sm text-green-700 font-semibold hidden">Copied!</span>
+        </div>
+    </div>
+
+    <script>
+        const githubUrlInput = document.getElementById('githubUrl');
+        const fetchButton = document.getElementById('fetchBtn');
+        const clearButton = document.getElementById('clearBtn');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMessageDiv = document.getElementById('errorMessage');
+        const resultsDiv = document.getElementById('results');
+        const resultContentDiv = document.getElementById('resultContent');
+        const copyUrlButton = document.getElementById('copyUrlBtn');
+        const copyMessageSpan = document.getElementById('copyMessage');
+        const fetchLimitInfoSpan = document.getElementById('fetchesRemaining');
+        const fetchLimitMessageDiv = document.getElementById('fetchLimitMessage');
+
+        let fetchCount = 0;
+        const MAX_FETCHES = 20;
+
+        function updateFetchButtonState() {
+            fetchLimitInfoSpan.textContent = MAX_FETCHES - fetchCount;
+            if (fetchCount >= MAX_FETCHES) {
+                fetchButton.disabled = true;
+                fetchLimitMessageDiv.classList.remove('hidden');
+                fetchButton.classList.remove('hover:bg-blue-700', 'hover:scale-105');
+            } else {
+                fetchButton.disabled = false;
+                fetchLimitMessageDiv.classList.add('hidden');
+                fetchButton.classList.add('hover:bg-blue-700', 'hover:scale-105');
+            }
+        }
+
+        updateFetchButtonState();
+
+        function showErrorMessage(message) {
+            errorMessageDiv.textContent = message;
+            errorMessageDiv.classList.remove('hidden');
+        }
+
+        function hideMessagesAndClearResults() {
+            loadingIndicator.classList.add('hidden');
+            errorMessageDiv.classList.add('hidden');
+            resultsDiv.classList.add('hidden');
+            resultContentDiv.innerHTML = '';
+            copyUrlButton.classList.add('hidden');
+            copyMessageSpan.classList.add('hidden');
+        }
+
+        function clearAll() {
+            githubUrlInput.value = '';
+            hideMessagesAndClearResults();
+            if (fetchCount >= MAX_FETCHES) { // Only reset fetchCount if the limit is reached
+                fetchCount = 0;
+            }
+            updateFetchButtonState();
+        }
+
+        async function fetchGitHubInfo() {
+            if (fetchCount >= MAX_FETCHES) {
+                showErrorMessage('Fetch limit reached. Please clear to reset.');
+                return;
+            }
+
+            hideMessagesAndClearResults();
+            loadingIndicator.classList.remove('hidden');
+
+            const url = githubUrlInput.value.trim();
+
+            if (!url) {
+                showErrorMessage('Please enter a GitHub URL.');
+                loadingIndicator.classList.add('hidden');
+                return;
+            }
+
+            let apiUrl = '';
+            let isRepo = false;
+            let currentFetchedUrl = '';
+
+            try {
+                const urlObj = new URL(url);
+                const pathParts = urlObj.pathname.split('/').filter(part => part !== '');
+
+                if (urlObj.hostname !== 'github.com') {
+                    throw new Error('Please enter a valid GitHub.com URL.');
+                }
+
+                if (pathParts.length === 1) {
+                    const username = pathParts[0];
+                    apiUrl = `https://api.github.com/users/${username}`;
+                } else if (pathParts.length >= 2) {
+                    const owner = pathParts[0];
+                    const repo = pathParts[1];
+                    apiUrl = `https://api.github.com/repos/${owner}/${repo}`;
+                    isRepo = true;
+                } else {
+                    throw new Error('Invalid GitHub URL format.');
+                }
+
+                const response = await fetch(apiUrl);
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error('User or repository not found. Please check the URL.');
+                    } else if (response.status === 403) {
+                         throw new Error('API rate limit exceeded. Please try again later. (GitHub API has rate limits for unauthenticated requests)');
+                    } else {
+                        throw new Error(`Error fetching data: ${response.status}: ${response.statusText}`);
+                    }
+                }
+
+                const data = await response.json();
+                currentFetchedUrl = data.html_url;
+
+                fetchCount++;
+                updateFetchButtonState();
+
+                resultsDiv.classList.remove('hidden');
+                let htmlContent = '';
+
+                if (isRepo) {
+                    htmlContent += `<p><strong>Repository Name:</strong> ${data.name}</p>`;
+                    htmlContent += `<p><strong>Owner:</strong> ${data.owner.login}</p>`;
+                    htmlContent += `<p><strong>Description:</strong> ${data.description || 'N/A'}</p>`;
+                    htmlContent += `<p><strong>Stars:</strong> ${data.stargazers_count}</p>`;
+                    htmlContent += `<p><strong>Forks:</strong> ${data.forks_count}</p>`;
+                    htmlContent += `<p><strong>Language:</strong> ${data.language || 'N/A'}</p>`;
+                    htmlContent += `<p><strong>Created At:</strong> ${new Date(data.created_at).toLocaleDateString()}</p>`;
+                    htmlContent += `<p><strong>Last Pushed At:</strong> ${new Date(data.pushed_at).toLocaleDateString()}</p>`;
+                    htmlContent += `<p><strong>License:</strong> ${data.license ? data.license.name : 'N/A'}</p>`;
+                    htmlContent += `<p><strong>URL:</strong> <a href="${data.html_url}" target="_blank" class="text-blue-500 hover:underline">${data.html_url}</a></p>`;
+                } else {
+                    htmlContent += `<p><strong>Name:</strong> ${data.name || 'N/A'}</p>`;
+                    htmlContent += `<p><strong>Username:</strong> ${data.login}</p>`;
+                    htmlContent += `<p><strong>Bio:</strong> ${data.bio || 'N/A'}</p>`;
+                    htmlContent += `<p><strong>Company:</strong> ${data.company || 'N/A'}</p>`;
+                    htmlContent += `<p><strong>Location:</strong> ${data.location || 'N/A'}</p>`;
+                    htmlContent += `<p><strong>Followers:</strong> ${data.followers}</p>`;
+                    htmlContent += `<p><strong>Following:</strong> ${data.following}</p>`;
+                    htmlContent += `<p><strong>Public Repos:</strong> ${data.public_repos}</p>`;
+                    htmlContent += `<p><strong>Public Gists:</strong> ${data.public_gists} (<a href="https://gist.github.com/${data.login}" target="_blank" class="text-blue-500 hover:underline">View Gists</a>)</p>`;
+                    htmlContent += `<p><strong>Blog/Website:</strong> ${data.blog ? `<a href="${data.blog}" target="_blank" class="text-blue-500 hover:underline">${data.blog}</a>` : 'N/A'}</p>`;
+                    htmlContent += `<p><strong>Created At:</strong> ${new Date(data.created_at).toLocaleDateString()}</p>`;
+                    htmlContent += `<p><strong>Profile URL:</strong> <a href="${data.html_url}" target="_blank" class="text-blue-500 hover:underline">${data.html_url}</a></p>`;
+                    if (data.avatar_url) {
+                        htmlContent += `<p class="mt-4"><img src="${data.avatar_url}" alt="${data.login}'s avatar" class="w-28 h-28 rounded-full border-4 border-indigo-300 shadow-md"></p>`;
+                    }
+                }
+                resultContentDiv.innerHTML = htmlContent;
+                copyUrlButton.classList.remove('hidden');
+
+                copyUrlButton.onclick = () => {
+                    const tempInput = document.createElement('textarea');
+                    tempInput.value = currentFetchedUrl;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+
+                    copyMessageSpan.classList.remove('hidden');
+                    setTimeout(() => {
+                        copyMessageSpan.classList.add('hidden');
+                    }, 2000);
+                };
+
+            } catch (error) {
+                showErrorMessage(error.message);
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        fetchButton.addEventListener('click', fetchGitHubInfo);
+        clearButton.addEventListener('click', clearAll);
+
+        githubUrlInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                fetchGitHubInfo();
+            }
+        });
+    </script>
+</body>
+</html>
